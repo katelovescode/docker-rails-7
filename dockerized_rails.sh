@@ -78,11 +78,6 @@ else
   fi
 fi
 
-# if there have been changes (specificially version files added because rbenv and nodenv exist), commit them
-if [[ $(git status --porcelain) ]]; then
-  git add . && git commit -m "Version files for local env management"
-fi
-
 # install bundler and rails
 gem install bundler rails
 
@@ -94,9 +89,6 @@ yarn set version "$yarn_version"
 
 # initiate rails w/ postgres, esbuild, postcss
 rails new . -f -n "$app_name" -d postgresql -j esbuild -c postcss -T
-
-# commit the bare rails initiation
-git add . && git commit -m "Fresh rails install with postgres, esbuild, postcss, and removing minitest"
 
 # The rest of this script assumes that `rails new` creates a database.yml with the following production configuration:
 #
@@ -115,9 +107,6 @@ host="<%= ENV[\"${constant_app_name}_DATABASE_HOST\"] %>" yq -i '.default.host =
 # conditionally do this on localhost only, and/or replace dockerfile/build for local dev, maybe a second script
 # turn off forced ssl
 sed -i -e 's/config.force_ssl = true/config.force_ssl = false/g' config/environments/production.rb
-
-# commit the host configuration
-git add . && git commit -m "Fresh rails install with postgres, esbuild, postcss, and removing minitest; changes ssl behavior in production env for development"
 
 # create the network
 docker network create "$app_name"
