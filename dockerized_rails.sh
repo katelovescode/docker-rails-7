@@ -28,6 +28,13 @@
 # confirmation dialogue saying this script handles rbenv or the default ruby, nodenv or the default node
 # if you have rbenv or nodenv this will work
 # if you're using system ruby or node, no guarantees
+
+# Move README so it won't be overwritten
+mv README.md SCRIPT_README.md
+
+# Install yq using homebrew, which for now is a required application
+# TODO: ENHANCEMENT
+# Install homebrew and/or find other installation methods
 if which brew; then
   if ! which yq; then
     brew install yq
@@ -38,6 +45,8 @@ else
 fi
 
 # Take in user's preferred app_name, defaults to the directory name
+read -rp "Mode: Create Rails App (1) / Develop Script (2) [1]: " development_mode
+development_mode=${development_mode:-1}
 read -rp "App Name [$(basename "$(pwd)")]: " app_name
 app_name=${app_name:-$(basename "$(pwd)")}
 constant_app_name=$(echo "$app_name" | tr '[:lower:]' '[:upper:]')
@@ -59,8 +68,10 @@ if command -v rbenv &>/dev/null; then
     rbenv install "$ruby_version"
   fi
 # if nodenv is not installed, install latest version with brew
+# TODO: ENHANCEMENT
+# Install homebrew and/or find other installation methods
 else
-  if ! which ruby || ! ruby -v | grep "$ruby_version"; then
+  if ! which ruby || ! ruby -v | grep "$ruby_version" && which brew; then
     brew install "ruby@${ruby_version}"
   fi
 fi
@@ -71,9 +82,11 @@ if command -v nodenv &>/dev/null; then
     nodenv install "$node_version"
   fi
 # if nodenv is not installed, install this major version with brew (I'm not sure if you can do minor versions)
+# TODO: ENHANCEMENT
+# Install homebrew and/or find other installation methods
 else
   major_version=$(echo "$node_version" | cut -d '.' -f1)
-  if ! which node || ! node -v | grep "$node_version"; then
+  if ! which node || ! node -v | grep "$node_version" && which brew; then
     brew install "node@${major_version}"
   fi
 fi
@@ -145,3 +158,12 @@ docker run -d \
   "$app_name"
 # TODO: ENHANCEMENT
 # configure passwords/secrets
+
+if [ "$development_mode" = 2 ]; then
+  read -rp "Destroy Rails app files to commit the script?: y/n [y]" destroy
+  destroy=${destroy:-y}
+
+  if [ "$destroy" = "y" ]; then
+    /bin/bash ./start_fresh.sh
+  fi
+fi

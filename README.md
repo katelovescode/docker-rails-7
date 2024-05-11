@@ -1,9 +1,5 @@
 # README
 
-> ## NOTE
->
-> This README will be overwritten after the script runs. If you want to keep it, run `mv README.md SCRIPT_README.md` before running the script
-
 This script is what I use on my local machine to spin up a Rails app with postgres in docker containers. It requests an app name (defaults to the directory it's in), a Ruby version (defaults to 3.2.3), and a Node version (defaults to 20.12.2).
 
 The script comments should cover documentation for each step, but of note is the following:
@@ -20,9 +16,6 @@ Once you've run the script, if your containers are stopped, you will need to run
 ## USAGE
 
 ```sh
-# optional
-mv README.md SCRIPT_README.md
-
 git clone git@github.com:katelovescode/docker-rails-7.git [/path/to/your/app/directory]
 sh dockerized_rails.sh
 ```
