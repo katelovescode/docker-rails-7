@@ -139,9 +139,9 @@ docker run -d \
 # configure passwords/secrets
 
 docker build \
-  --build-arg="RUBY_VERSION=$(cat ./.ruby-version)" \
-  --build-arg="NODE_VERSION=$(cat ./.node-version)" \
-  --build-arg="YARN_VERSION=$(cat ./.yarn-version)" \
+  --build-arg="RUBY_VERSION=$ruby_version" \
+  --build-arg="NODE_VERSION=$node_version" \
+  --build-arg="YARN_VERSION=$yarn_version" \
   -t "$app_name" \
   .
 
