@@ -160,7 +160,7 @@ docker run -d \
 # configure passwords/secrets
 
 if [ "$development_mode" = 2 ]; then
-  read -rp "Destroy Rails app files to commit the script?: y/n [y]" destroy
+  read -rp "Destroy Rails app files to commit the script? [y]: " destroy
   destroy=${destroy:-y}
 
   if [ "$destroy" = "y" ]; then
