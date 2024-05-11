@@ -20,6 +20,13 @@ git clone git@github.com:katelovescode/docker-rails-7.git [/path/to/your/app/dir
 sh dockerized_rails.sh
 ```
 
+The script will prompt you for the mode you'd like to run it in; enter the number indicating your preference:
+
+1. **`Create Rails App` mode** is intended for spinning up a working Dockerized Rails instance ready for development, and it will do what it says on the tin; create a new rails app and spin up the docker containers
+2. **`Develop Script` mode** is intended for developing on the script itself. It will create a new Rails app, spin up the docker containers and then prompt you if you'd like to destroy the Rails app itself. The way I use it is that I leave the prompt open while I dig around in the app and make sure everything is configured how I want, make any necessary changes to the script, and then go back to the prompt and enter `y` to destroy the Rails app directories or `n` if you want to keep them. _**NOTE: This doesn't destroy the docker images or containers, that will need to be done manually.**_
+
+If you decide that you want to start over at any time, `sh start_fresh.sh` is a convenience script to revert the repository back to its original state (that's what `Develop Script` mode does when you enter `y`)
+
 ## TODO
 
 ### Enhancements
@@ -30,3 +37,4 @@ sh dockerized_rails.sh
 - script confirmation dialogue saying this script handles rbenv or the default ruby, nodenv or the default node
 - remove added dependencies that aren't essential for rails
 - take in a target directory to install rails in
+- automate tearing down the docker configuration when starting fresh
