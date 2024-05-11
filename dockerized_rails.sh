@@ -47,8 +47,8 @@ read -rp "Ruby version [3.2.3]: " ruby_version
 ruby_version=${ruby_version:-3.2.3}
 read -rp "Node version [20.12.2]: " node_version
 node_version=${node_version:-20.12.2}
-read -rp "Yarn version [1.22.12]: " yarn_version
-yarn_version=${yarn_version:-1.22.12}
+read -rp "Yarn version [1.22.22]: " yarn_version
+yarn_version=${yarn_version:-1.22.22}
 
 echo "$ruby_version" >.ruby-version
 echo "$node_version" >.node-version
