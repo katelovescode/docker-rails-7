@@ -47,6 +47,12 @@ read -rp "Ruby version [3.2.3]: " ruby_version
 ruby_version=${ruby_version:-3.2.3}
 read -rp "Node version [20.12.2]: " node_version
 node_version=${node_version:-20.12.2}
+read -rp "Yarn version [1.22.12]: " yarn_version
+yarn_version=${yarn_version:-1.22.12}
+
+echo "$ruby_version" >.ruby-version
+echo "$node_version" >.node-version
+echo "$yarn_version" >.yarn-version
 
 if command -v rbenv &>/dev/null; then
   rbenv local "$ruby_version"
@@ -131,7 +137,12 @@ docker run -d \
 # TODO: ENHANCEMENT
 # configure passwords/secrets
 
-docker build . -t "$app_name"
+docker build \
+  --build-arg="RUBY_VERSION=$(cat ./.ruby-version)" \
+  --build-arg="NODE_VERSION=$(cat ./.node-version)" \
+  --build-arg="YARN_VERSION=$(cat ./.yarn-version)" \
+  -t "$app_name" \
+  .
 
 docker run -d \
   --name "$app_name" \
