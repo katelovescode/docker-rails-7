@@ -55,7 +55,6 @@ echo "$node_version" >.node-version
 echo "$yarn_version" >.yarn-version
 
 if command -v rbenv &>/dev/null; then
-  rbenv local "$ruby_version"
   if ! rbenv versions | grep "$ruby_version"; then
     rbenv install "$ruby_version"
   fi
@@ -68,7 +67,6 @@ fi
 
 # if nodenv is installed, check for this version and install it if it doesn't exist
 if command -v nodenv &>/dev/null; then
-  nodenv local "$node_version"
   if ! nodenv versions | grep "$node_version"; then
     nodenv install "$node_version"
   fi
@@ -85,11 +83,14 @@ if [[ $(git status --porcelain) ]]; then
   git add . && git commit -m "Version files for local env management"
 fi
 
-# install bundler and rails if they're not already installed
+# install bundler and rails
 gem install bundler rails
 
-# install yarn if it's not already installed
+# install yarn
 npm install -g yarn
+
+# set yarn version
+yarn set version "$yarn_version"
 
 # initiate rails w/ postgres, esbuild, postcss
 rails new . -f -n "$app_name" -d postgresql -j esbuild -c postcss -T
