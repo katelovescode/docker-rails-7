@@ -44,11 +44,26 @@ else
   exit 1
 fi
 
-# Take in user's preferred app_name, defaults to the directory name
+parameterize() {
+  parameter_name="${1//[^a-zA-Z0-9]/_}"
+  parameter_name=$(echo "$parameter_name" | sed -r 's/[_]+/_/g')
+  echo "$parameter_name"
+}
+
+# Take in user's preferred mode, defaults to Create Rails App mode
 read -rp "Mode: Create Rails App (1) / Develop Script (2) [1]: " development_mode
 development_mode=${development_mode:-1}
-read -rp "App Name [$(basename "$(pwd)")]: " app_name
-app_name=${app_name:-$(basename "$(pwd)")}
+
+# Take in user's preferred app_name, defaults to the directory name
+directory=$(basename "$(pwd)")
+default_name=$(parameterize "$directory")
+read -rp "App Name [$default_name]: " app_name
+if [ "$app_name" != "" ]; then
+  app_name=$(parameterize "$app_name")
+else
+  app_name="$default_name"
+fi
+
 constant_app_name=$(echo "$app_name" | tr '[:lower:]' '[:upper:]')
 
 # Take in user's preferred versions with defaults
@@ -59,9 +74,9 @@ node_version=${node_version:-20.12.2}
 read -rp "Yarn version [1.22.22]: " yarn_version
 yarn_version=${yarn_version:-1.22.22}
 
-echo "$ruby_version" >.ruby-version
-echo "$node_version" >.node-version
-echo "$yarn_version" >.yarn-version
+echo "$ruby_version" | tee .ruby-version &>/dev/null
+echo "$node_version" | tee .node-version &>/dev/null
+echo "$yarn_version" | tee .yarn-version &>/dev/null
 
 if command -v rbenv &>/dev/null; then
   if ! rbenv versions | grep "$ruby_version"; then
@@ -71,7 +86,7 @@ if command -v rbenv &>/dev/null; then
 # TODO: ENHANCEMENT
 # Install homebrew and/or find other installation methods
 else
-  if ! which ruby || ! ruby -v | grep "$ruby_version" && which brew; then
+  if ! which ruby &>/dev/null || ! ruby -v | grep "$ruby_version" &>/dev/null && which brew &>/dev/null; then
     brew install "ruby@${ruby_version}"
   fi
 fi
@@ -86,7 +101,7 @@ if command -v nodenv &>/dev/null; then
 # Install homebrew and/or find other installation methods
 else
   major_version=$(echo "$node_version" | cut -d '.' -f1)
-  if ! which node || ! node -v | grep "$node_version" && which brew; then
+  if ! which node &>/dev/null || ! node -v | grep "$node_version" &>/dev/null && which brew &>/dev/null; then
     brew install "node@${major_version}"
   fi
 fi
@@ -121,6 +136,13 @@ host="<%= ENV[\"${constant_app_name}_DATABASE_HOST\"] %>" yq -i '.default.host =
 # turn off forced ssl
 sed -i -e 's/config.force_ssl = true/config.force_ssl = false/g' config/environments/production.rb
 
+# create a gitignored secrets folder
+mkdir .secrets
+echo ".secrets/**" >>.gitignore
+
+# create the db password file
+date | md5 | head -c32 >./.secrets/db_password
+
 # create the network
 docker network create "$app_name"
 
@@ -135,10 +157,8 @@ docker run -d \
   -p 5432:5432 \
   -e POSTGRES_USER="${app_name}" \
   -e POSTGRES_DB="${app_name}_production" \
-  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_PASSWORD="$(cat ./.secrets/db_password)" \
   postgres
-# TODO: ENHANCEMENT
-# configure passwords/secrets
 
 docker build \
   --build-arg="RUBY_VERSION=$ruby_version" \
@@ -154,10 +174,8 @@ docker run -d \
   -p 3000:3000 \
   -e RAILS_MASTER_KEY="$(cat ./config/master.key)" \
   -e "${constant_app_name}_DATABASE_HOST"="${app_name}_postgres" \
-  -e "${constant_app_name}_DATABASE_PASSWORD"=password \
+  -e "${constant_app_name}_DATABASE_PASSWORD"="$(cat ./.secrets/db_password)" \
   "$app_name"
-# TODO: ENHANCEMENT
-# configure passwords/secrets
 
 if [ "$development_mode" = 2 ]; then
   read -rp "Destroy Rails app files to commit the script? [y]: " destroy
