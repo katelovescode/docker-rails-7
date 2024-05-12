@@ -1,9 +1,10 @@
 #!/bin/bash
 
 #######################
-# Requirements
+# Prerequisites
 #######################
 # homebrew
+# docker
 
 #######################
 # Dependencies Added
@@ -13,7 +14,7 @@
 # node
 
 # TODO: ENHANCEMENT
-# remove added dependencies that aren't essential for rails
+# at the end of the script, remove added dependencies that aren't essential for rails
 
 #######################
 # Optional
@@ -25,18 +26,18 @@
 # Take in target directory to the script as a param
 
 # TODO: ENHANCEMENT
+# If ports are running for other docker containers, alert and stop the script
+
+# TODO: ENHANCEMENT
 # confirmation dialogue saying this script handles rbenv or the default ruby, nodenv or the default node
 # if you have rbenv or nodenv this will work
 # if you're using system ruby or node, no guarantees
 
-# Move README so it won't be overwritten
-mv README.md SCRIPT_README.md
-
 # Install yq using homebrew, which for now is a required application
 # TODO: ENHANCEMENT
 # Install homebrew and/or find other installation methods
-if which brew; then
-  if ! which yq; then
+if which brew &>/dev/null; then
+  if ! which yq &>/dev/null; then
     brew install yq
   fi
 else
@@ -47,6 +48,7 @@ fi
 parameterize() {
   parameter_name="${1//[^a-zA-Z0-9]/_}"
   parameter_name=$(echo "$parameter_name" | sed -r 's/[_]+/_/g')
+  parameter_name=$(echo "$parameter_name" | tr '[:upper:]' '[:lower:]')
   echo "$parameter_name"
 }
 
@@ -74,15 +76,31 @@ node_version=${node_version:-20.12.2}
 read -rp "Yarn version [1.22.22]: " yarn_version
 yarn_version=${yarn_version:-1.22.22}
 
+echo "
+                               •☽────✧˖°˖☆˖°˖✧────☾•
+
+Creating Rails app $app_name with Ruby $ruby_version, Node $node_version, Yarn $yarn_version
+
+                               •☽────✧˖°˖☆˖°˖✧────☾•
+
+"
+read -rp "Confirm? [n]: " confirm
+if ! [ "$confirm" = "y" ]; then
+  exit 1
+fi
+# Move README so it won't be overwritten
+mv README.md SCRIPT_README.md
+
 echo "$ruby_version" | tee .ruby-version &>/dev/null
 echo "$node_version" | tee .node-version &>/dev/null
 echo "$yarn_version" | tee .yarn-version &>/dev/null
 
+# if rbenv is installed, check for this version and install it if it doesn't exist
 if command -v rbenv &>/dev/null; then
-  if ! rbenv versions | grep "$ruby_version"; then
+  if ! rbenv versions | grep "$ruby_version" &>/dev/null; then
     rbenv install "$ruby_version"
   fi
-# if nodenv is not installed, install latest version with brew
+# if rbenv is not installed, install latest version with brew
 # TODO: ENHANCEMENT
 # Install homebrew and/or find other installation methods
 else
@@ -93,7 +111,7 @@ fi
 
 # if nodenv is installed, check for this version and install it if it doesn't exist
 if command -v nodenv &>/dev/null; then
-  if ! nodenv versions | grep "$node_version"; then
+  if ! nodenv versions | grep "$node_version" &>/dev/null; then
     nodenv install "$node_version"
   fi
 # if nodenv is not installed, install this major version with brew (I'm not sure if you can do minor versions)
@@ -149,6 +167,7 @@ docker network create "$app_name"
 # initiate a data volume
 docker volume create "${app_name}_pgdata"
 
+# run the postgres container
 docker run -d \
   --name "${app_name}_postgres" \
   --network "$app_name" \
@@ -160,6 +179,7 @@ docker run -d \
   -e POSTGRES_PASSWORD="$(cat ./.secrets/db_password)" \
   postgres
 
+# build the rails image
 docker build \
   --build-arg="RUBY_VERSION=$ruby_version" \
   --build-arg="NODE_VERSION=$node_version" \
@@ -167,6 +187,7 @@ docker build \
   -t "$app_name" \
   .
 
+# run the rails container
 docker run -d \
   --name "$app_name" \
   --network "$app_name" \
@@ -177,11 +198,12 @@ docker run -d \
   -e "${constant_app_name}_DATABASE_PASSWORD"="$(cat ./.secrets/db_password)" \
   "$app_name"
 
+# if we're in development mode, run the start_fresh script to reset everything
 if [ "$development_mode" = 2 ]; then
   read -rp "Destroy Rails app files to commit the script? [y]: " destroy
   destroy=${destroy:-y}
 
   if [ "$destroy" = "y" ]; then
-    /bin/bash ./start_fresh.sh
+    /bin/bash ./start_fresh.sh "$app_name"
   fi
 fi
