@@ -22,10 +22,26 @@ sh dockerized_rails.sh
 
 The script will prompt you for the mode you'd like to run it in; enter the number indicating your preference:
 
-1. **`Create Rails App` mode** is intended for spinning up a working Dockerized Rails instance ready for development, and it will do what it says on the tin; create a new rails app and spin up the docker containers
+1. **`Create Rails App` mode** is intended for spinning up a working Dockerized Rails instance ready for development, and it will do what it says on the tin; create a new rails app and spin up the docker containers.
 2. **`Develop Script` mode** is intended for developing on the script itself. It will create a new Rails app, spin up the docker containers and then prompt you if you'd like to destroy the Rails app itself. The way I use it is that I leave the prompt open while I dig around in the app and make sure everything is configured how I want, make any necessary changes to the script, and then go back to the prompt and enter `y` to destroy the Rails app directories or `n` if you want to keep them. _**NOTE: This doesn't destroy the docker images or containers, that will need to be done manually.**_
 
 If you decide that you want to start over at any time, `sh start_fresh.sh` is a convenience script to revert the repository back to its original state (that's what `Develop Script` mode does when you enter `y`)
+
+## NOTES ON DEVELOPMENT
+
+Just keeping notes here for myself; as I develop on the script, best/easiest development practice is probably to do the following:
+
+```bash
+git checkout -b new_feature
+# make changes to script(s), etc.
+git add . && git commit -m "I made these cool changes"
+sh dockerized_rails.sh
+# leave prompt for deletion open without answering
+# check to see if everything works as expected
+# if so, respond "y" to the deletion script
+# if any lingering artifacts are present:
+git reset --hard
+```
 
 ## TODO
 
