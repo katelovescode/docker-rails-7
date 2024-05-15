@@ -54,3 +54,7 @@ git reset --hard
 - remove added dependencies that aren't essential for rails
 - take in a target directory to install rails in
 - automate tearing down the docker configuration when starting fresh
+
+###### TODO for Development
+
+Currently, development container can't find postgres - I tried changing to port 5431 in the db config (see the dockerized_rails port mapping on the run commands for postgres) but that didn't work either. This is the next step to fix.
