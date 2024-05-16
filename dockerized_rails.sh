@@ -147,27 +147,43 @@ rails new . -f -n "$app_name" -d postgresql -j esbuild -c postcss -T
 # If versions of Rails after 7 change how this is done, this script won't work anymore
 
 # edit the default database configuration to include the host we need to connect rails to the postgres container
-host="<%= ENV[\"${constant_app_name}_DATABASE_HOST\"] %>" yq -i '.default.host = strenv(host)' config/database.yml
+username="$app_name" yq -i '.default.username = strenv(username)' config/database.yml
+host="<%= ENV[\"${constant_app_name}_DATABASE_HOST\"] %>" yq -i '.production.host = strenv(host)' config/database.yml
+dev_host="<%= ENV[\"${constant_app_name}_DATABASE_HOST_DEVELOPMENT\"] %>" yq -i '.development.host = strenv(dev_host)' config/database.yml
+dev_pass="<%= ENV[\"${constant_app_name}_DATABASE_PASSWORD_DEVELOPMENT\"] %>" yq -i '.development.password = strenv(dev_pass)' config/database.yml
+dev_port=5431 yq -i '.development.port = strenv(dev_port)' config/database.yml
 
 # TODO: ENHANCEMENT
 # conditionally do this on localhost only, and/or replace dockerfile/build for local dev, maybe a second script
 # turn off forced ssl
 sed -i -e 's/config.force_ssl = true/config.force_ssl = false/g' config/environments/production.rb
 
+# Copy multistage dockerfile
+mv -f Dockerfile Dockerfile.default
+mv -f Dockerfile.multistage Dockerfile
+
 # create a gitignored secrets folder
 mkdir .secrets
 echo ".secrets/**" >>.gitignore
 
 # create the db password file
+# TODO: fix this as the db passwords are the same hash
 date | md5 | head -c32 >./.secrets/db_password
+date | md5 | head -c32 >./.secrets/db_password_development
 
-# create the network
+# create networks
 docker network create "$app_name"
+docker network create "${app_name}_development"
 
-# initiate a data volume
+# initiate data volumes
 docker volume create "${app_name}_pgdata"
+docker volume create "${app_name}_pgdata_development"
 
-# run the postgres container
+############################
+# Production
+############################
+
+# run the production postgres container
 docker run -d \
   --name "${app_name}_postgres" \
   --network "$app_name" \
@@ -179,15 +195,17 @@ docker run -d \
   -e POSTGRES_PASSWORD="$(cat ./.secrets/db_password)" \
   postgres
 
-# build the rails image
+# build the rails production image
 docker build \
   --build-arg="RUBY_VERSION=$ruby_version" \
   --build-arg="NODE_VERSION=$node_version" \
   --build-arg="YARN_VERSION=$yarn_version" \
+  --target production \
+  --no-cache \
   -t "$app_name" \
   .
 
-# run the rails container
+# run the rails production container
 docker run -d \
   --name "$app_name" \
   --network "$app_name" \
@@ -197,6 +215,43 @@ docker run -d \
   -e "${constant_app_name}_DATABASE_HOST"="${app_name}_postgres" \
   -e "${constant_app_name}_DATABASE_PASSWORD"="$(cat ./.secrets/db_password)" \
   "$app_name"
+
+############################
+# Development
+############################
+
+# run the development postgres container
+docker run -d \
+  --name "${app_name}_postgres_development" \
+  --network "${app_name}_development" \
+  --network-alias "${app_name}_postgres_development" \
+  -v "${app_name}_pgdata_development":/var/lib/postgresql/data \
+  -p 5431:5432 \
+  -e POSTGRES_USER="${app_name}" \
+  -e POSTGRES_DB="${app_name}_development" \
+  -e POSTGRES_PASSWORD="$(cat ./.secrets/db_password_development)" \
+  postgres
+
+# build the rails development image
+docker build \
+  --build-arg="RUBY_VERSION=$ruby_version" \
+  --build-arg="NODE_VERSION=$node_version" \
+  --build-arg="YARN_VERSION=$yarn_version" \
+  --target development \
+  --no-cache \
+  -t "${app_name}_development" \
+  .
+
+# run the rails development container
+docker run -d \
+  --name "${app_name}_development" \
+  --network "${app_name}_development" \
+  --network-alias "${app_name}_app_development" \
+  -p 3001:3000 \
+  -e RAILS_MASTER_KEY="$(cat ./config/master.key)" \
+  -e "${constant_app_name}_DATABASE_HOST_DEVELOPMENT"="${app_name}_postgres_development" \
+  -e "${constant_app_name}_DATABASE_PASSWORD_DEVELOPMENT"="$(cat ./.secrets/db_password_development)" \
+  "${app_name}_development"
 
 # if we're in development mode, run the start_fresh script to reset everything
 if [ "$development_mode" = 2 ]; then
